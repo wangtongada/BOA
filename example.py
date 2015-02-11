@@ -8,10 +8,10 @@ from collections import defaultdict
 """ parameters """
 Nrules = 2000      # number of rules to be used in SA_patternbased and also the output of generate_rules
 Niteration = 5000  # number of iterations in each chain
-Nchain = 3 		   # number of chains in the simulated annealing search algorithm
+Nchain = 3         # number of chains in the simulated annealing search algorithm
 supp = 5           # 5%
 maxlen = 3         # maxmum length of a pattern
-alpha1 = 500 	   # alpha_+
+alpha1 = 500       # alpha_+
 beta1 = 1          # beta_+
 alpha2 = 1         # alpha_-
 beta2 = 500        # beta_-
@@ -23,7 +23,6 @@ filepathX = 'tictactoe_X.txt' # input file X
 filepathY = 'tictactoe_Y.txt' # input file Y
 df = read_csv(filepathX,header=0,sep=" ")
 Y = np.loadtxt(open(filepathY,"rb"),delimiter=" ")
-Y = (Y + 1)/2
 
 
 lenY = len(Y)
