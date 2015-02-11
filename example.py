@@ -6,15 +6,15 @@ from collections import defaultdict
 
 
 """ parameters """
-Nrules = 2000      # number of rules to be used in SA_patternbased and also the output of generate_rules
+N = 2000      # number of rules to be used in SA_patternbased and also the output of generate_rules
 Niteration = 5000  # number of iterations in each chain
 Nchain = 3         # number of chains in the simulated annealing search algorithm
 supp = 5           # 5%
 maxlen = 3         # maxmum length of a pattern
-alpha1 = 500       # alpha_+
-beta1 = 1          # beta_+
-alpha2 = 1         # alpha_-
-beta2 = 500        # beta_-
+alpha_1 = 500       # alpha_+
+beta_1 = 1          # beta_+
+alpha_2 = 1         # alpha_-
+beta_2 = 500        # beta_-
 
 """ input file """
 # notice that in the example, X is already binary coded. 
@@ -30,8 +30,8 @@ train_index = sample(xrange(lenY),int(0.70*lenY))
 test_index = [i for i in xrange(lenY) if i not in train_index]
 
 model = BOA(df.iloc[train_index],Y[train_index])
-model.generate_rules(supp,maxlen,Nrules)
-model.set_parameters(alpha1,beta1,alpha2,beta2,None,None)
+model.generate_rules(supp,maxlen,N)
+model.set_parameters(alpha_1,beta_1,alpha_2,beta_2,None,None)
 ruleset = model.SA_patternbased(Niteration,Nchain,print_message=True)
 
 rules = [list(model.rules[i]) for i in ruleset]

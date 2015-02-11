@@ -19,11 +19,8 @@ class BOA(object):
         self.itemMatrix = [[item for item in binary_data.columns if row[item] ==1] for i,row in binary_data.iterrows() ]  
         self.df = binary_data  
         self.Y = Y
-        self.index = np.where(Y==1)[0]
-        self.nindex = np.where(Y!=1)[0]
         self.attributeLevelNum = defaultdict(int) 
         self.attributeNames = []
-
         for i,name in enumerate(binary_data.columns):
           attribute = name.split('_')[0]
           self.attributeLevelNum[attribute] += 1
@@ -48,17 +45,19 @@ class BOA(object):
 # This function generates rules that satisfy supp and maxlen using fpgrowth, then it selects the top N rules that make data have the biggest decrease in entropy
     def generate_rules(self,supp,maxlen,N):
         self.maxlen = maxlen
+        pindex = np.where(self.Y==1)[0]
+        nindex = np.where(self.Y!=1)[0]
         print 'Generating rules...'
         start_time = time.time()
-        rules= fpgrowth([self.itemMatrix[i] for i in self.index],supp = 5,zmin = 1,zmax = self.maxlen)
+        rules= fpgrowth([self.itemMatrix[i] for i in pindex],supp = 5,zmin = 1,zmax = self.maxlen)
         start_time = time.time()
         print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
         print 'Selecting {} rules...'.format(N)
         itemInd = {}
         for i,name in enumerate(self.df.columns):
           itemInd[name] = i
-        len_index = len(self.index)
-        len_nindex = len(self.nindex)
+        len_index = len(pindex)
+        len_nindex = len(nindex)
         indices = np.array(list(itertools.chain.from_iterable([[itemInd[x] for x in rule[0]] for rule in rules])))
         len_rules = [len(rule[0]) for rule in rules]
         indptr =list(accumulate(len_rules))
@@ -66,7 +65,7 @@ class BOA(object):
         indptr = np.array(indptr)
         data = np.ones(len(indices))
         ruleMatrix = csc_matrix((data,indices,indptr),shape = (len(self.df.columns),len(rules)))
-        df = np.matrix(self.df.iloc[self.nindex])
+        df = np.matrix(self.df.iloc[nindex])
         mat = df * ruleMatrix
         lenMatrix = np.matrix([len_rules for i in xrange(df.shape[0])])
         FP = np.array(np.sum(mat ==lenMatrix,axis = 0))[0]
