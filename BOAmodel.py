@@ -45,6 +45,7 @@ class BOA(object):
         print '\tTook %0.3fs to compute patternspace' % (time.time() - start_time)
         return patternSpace        
 
+# This function generates rules that satisfy supp and maxlen using fpgrowth, then it selects the top N rules that make data have the biggest decrease in entropy
     def generate_rules(self,supp,maxlen,N):
         self.maxlen = maxlen
         print 'Generating rules...'
