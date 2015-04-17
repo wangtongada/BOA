@@ -246,16 +246,6 @@ class BOA(object):
         post =  prior_ChsRules +  likelihood_1 + likelihood_2
         return [TP,FP,TN,FN],[prior_ChsRules,likelihood_1,likelihood_2]
 
-    def normalize_add(self, rules_new, rule_index):
-        rules = rules_new[:]
-        for rule in rules_new:
-            if set(self.rules[rule]).issubset(self.rules[rule_index]):
-                return rules_new[:]
-            if set(self.rules[rule_index]).issubset(self.rules[rule]):
-                rules.remove(rule)
-        rules.append(rule_index)
-        return rules
-
     def normalize(self, rules_new):
         try:
             rules_len = [len(self.rules[index]) for index in rules_new]
