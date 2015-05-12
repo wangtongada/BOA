@@ -77,8 +77,8 @@ class BOA(object):
         pp = (TP+FP).astype(float)/(TP+FP+TN+FN)
         tpr = TP.astype(float)/(TP+FN)
         fpr = FP.astype(float)/(FP+TN)
-        entropy = -pp*(p1*np.log(p1)+(1-p1)*np.log(1-p1))-(1-pp)*(p2*np.log(p2)+(1-p2)*np.log(1-p2))
-        select = np.argsort(entropy)[::-1][-N:]
+        cond_entropy = -pp*(p1*np.log(p1)+(1-p1)*np.log(1-p1))-(1-pp)*(p2*np.log(p2)+(1-p2)*np.log(1-p2))
+        select = np.argsort(cond_entropy)[::-1][-N:]
         self.rules = [rules[i][0] for i in select]
         print '\tTook %0.3fs to select %d rules' % (time.time() - start_time, min(len(rules),N))
         self.RMatrix = np.zeros([len(self.itemMatrix),len(self.rules)]) # for each observation, compare with all patterns to see if there's a match
