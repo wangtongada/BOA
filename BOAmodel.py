@@ -12,6 +12,8 @@ import time
 import operator
 from collections import Counter, defaultdict
 from scipy.sparse import csc_matrix
+from sklearn.ensemble import RandomForestClassifier
+
 
 
 class BOA(object):
@@ -32,61 +34,85 @@ class BOA(object):
         print 'Computing sizes for pattern space ...'
         start_time = time.time()
         """ compute the rule space from the levels in each attribute """
-        patternSpace = np.zeros(self.maxlen+1)
+        self.patternSpace = np.zeros(self.maxlen+1)
         for k in xrange(1,self.maxlen+1,1):
             for subset in combinations(self.attributeNames,k):
                 tmp = 1
                 for i in subset:
                     tmp = tmp * self.attributeLevelNum[i]
-                patternSpace[k] = patternSpace[k] + tmp
-        print '\tTook %0.3fs to compute patternspace' % (time.time() - start_time)
-        return patternSpace        
+                self.patternSpace[k] = self.patternSpace[k] + tmp
+        print '\tTook %0.3fs to compute patternspace' % (time.time() - start_time)               
 
 # This function generates rules that satisfy supp and maxlen using fpgrowth, then it selects the top N rules that make data have the biggest decrease in entropy
-    def generate_rules(self,supp,maxlen,N):
+# there are two ways to generate rules. fpgrowth can handle cases where the maxlen is small. If maxlen<=3, fpgrowth can generates rules much faster than randomforest. 
+# If maxlen is big, fpgrowh tends to generate too many rules that overflow the memories. 
+    def generate_rules(self,supp,maxlen,N, method = 'randomforest'):
         self.maxlen = maxlen
-        pindex = np.where(self.Y==1)[0]
-        nindex = np.where(self.Y!=1)[0]
-        print 'Generating rules...'
-        start_time = time.time()
-        rules= fpgrowth([self.itemMatrix[i] for i in pindex],supp = 5,zmin = 1,zmax = self.maxlen)
-        start_time = time.time()
-        print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
-        print 'Selecting {} rules...'.format(N)
+        self.supp = supp
+        df = 1-self.df #df has negative associations
+        df.columns = [name.strip() + '_neg' for name in self.df.columns]
+        df = pd.concat([self.df,df],axis = 1)
+        if method =='fpgrowth' and maxlen<=3:
+            itemMatrix = [[item for item in df.columns if row[item] ==1] for i,row in df.iterrows() ]  
+            pindex = np.where(self.Y==1)[0]
+            nindex = np.where(self.Y!=1)[0]
+            print 'Generating rules using fpgrowth'
+            start_time = time.time()
+            rules= fpgrowth([self.itemMatrix[i] for i in pindex],supp = supp,zmin = 1,zmax = maxlen)
+            rules = [rule[0] for rule in rules]
+            start_time = time.time()
+            print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
+        else:
+            rules = []
+            start_time = time.time()
+            for length in xrange(1,maxlen+1,1):
+                n_estimators = min(pow(df.shape[1],length),4000)
+                clf = RandomForestClassifier(n_estimators = n_estimators,max_depth = length)
+                clf.fit(self.df,self.Y)
+                for n in xrange(n_estimators):
+                    rules.extend(extract_rules(clf.estimators_[n],df.columns))
+            rules = [list(x) for x in set(tuple(x) for x in rules)]
+            print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
+        self.screen_rules(rules,df,N) # select the top N rules using secondary criteria, information gain
+        self.patternSpace = self.getPatternSpace()
+        return
+
+    def screen_rules(self,rules,df,N):
+        print 'Screening rules using information gain'
         itemInd = {}
-        for i,name in enumerate(self.df.columns):
-          itemInd[name] = i
-        len_index = len(pindex)
-        len_nindex = len(nindex)
-        indices = np.array(list(itertools.chain.from_iterable([[itemInd[x] for x in rule[0]] for rule in rules])))
-        len_rules = [len(rule[0]) for rule in rules]
+        for i,name in enumerate(df.columns):
+            itemInd[name] = i
+        indices = np.array(list(itertools.chain.from_iterable([[itemInd[x] for x in rule] for rule in rules])))
+        len_rules = [len(rule) for rule in rules]
         indptr =list(accumulate(len_rules))
         indptr.insert(0,0)
         indptr = np.array(indptr)
         data = np.ones(len(indices))
-        ruleMatrix = csc_matrix((data,indices,indptr),shape = (len(self.df.columns),len(rules)))
-        df = np.matrix(self.df.iloc[nindex])
-        mat = df * ruleMatrix
+        ruleMatrix = csc_matrix((data,indices,indptr),shape = (len(df.columns),len(rules)))
+        mat = np.matrix(df) * ruleMatrix
         lenMatrix = np.matrix([len_rules for i in xrange(df.shape[0])])
-        FP = np.array(np.sum(mat ==lenMatrix,axis = 0))[0]
-        TP = np.array([rule[1][0] for rule in rules])
-        TN = len_nindex - FP
-        FN = len_index - TP
+        Z =  (mat ==lenMatrix).astype(int)
+        Zpos = [Z[i] for i in np.where(self.Y>0)][0]
+        TP = np.array(np.sum(Zpos,axis=0).tolist()[0])
+        supp_select = np.where(TP>=self.supp*sum(self.Y)/100)[0]
+        if len(supp_select)<len(rules):
+            rules = [rules[i] for i in supp_select]
+            Z = [[row.tolist()[0][i] for i in supp_select] for row in Z]
+            TP = TP[supp_select]
+        else:
+            Z = [row.tolist()[0] for row in Z]
+        FP = np.array(np.sum(Z,axis = 0))[0] - TP
+        TN = len(self.Y) - np.sum(self.Y) - FP
+        FN = np.sum(self.Y) - TP
         p1 = TP.astype(float)/(TP+FP)
         p2 = FN.astype(float)/(FN+TN)
         pp = (TP+FP).astype(float)/(TP+FP+TN+FN)
         tpr = TP.astype(float)/(TP+FN)
         fpr = FP.astype(float)/(FP+TN)
-        entropy = -pp*(p1*np.log(p1)+(1-p1)*np.log(1-p1))-(1-pp)*(p2*np.log(p2)+(1-p2)*np.log(1-p2))
-        select = np.argsort(entropy)[::-1][-N:]
-        self.rules = [rules[i][0] for i in select]
-        print '\tTook %0.3fs to select %d rules' % (time.time() - start_time, min(len(rules),N))
-        self.RMatrix = np.zeros([len(self.itemMatrix),len(self.rules)]) # for each observation, compare with all patterns to see if there's a match
-        for i,row in enumerate(self.itemMatrix):
-            self.RMatrix[i] = [set(rule).issubset(row) for rule in self.rules]
-        self.patternSpace = self.getPatternSpace()
-        self.precision = p1[select]
-
+        cond_entropy = -pp*(p1*np.log(p1)+(1-p1)*np.log(1-p1))-(1-pp)*(p2*np.log(p2)+(1-p2)*np.log(1-p2))
+        select = np.argsort(cond_entropy)[::-1][-N:]
+        self.rules = [rules[i] for i in select]
+        self.RMatrix = [[row[i] for i in select] for row in Z]
 
     def set_parameters(self, a1=100,b1=1,a2=1,b2=100,al=None,bl=None):
         # input al and bl are lists
@@ -98,8 +124,8 @@ class BOA(object):
             print 'No or wrong input for alpha_l and beta_l. The model will use default parameters!'
             self.C = [1.0/self.maxlen for i in xrange(self.maxlen)]
             self.C.insert(0,-1)
-            self.alpha_l = [1 for i in xrange(self.maxlen+1)]
-            self.beta_l= [self.patternSpace[i]/self.C[i] for i in xrange(self.maxlen+1)]
+            self.alpha_l = [10 for i in xrange(self.maxlen+1)]
+            self.beta_l= [10*self.patternSpace[i]/self.C[i] for i in xrange(self.maxlen+1)]
         else:
             self.alpha_l=al
             self.beta_l = bl
@@ -110,10 +136,11 @@ class BOA(object):
         RMatrix = np.matrix(self.RMatrix)
         self.rules_len = [len(rule) for rule in self.rules]
         nRules = len(self.rules)
+        print 'There are {} candidate rules'.format(nRules)
         maps = defaultdict(list)
         T0 = 100
-        split = 0.85*Niteration
-        q = 0.2 #indicates the level of randomization in annealing, can be user defined
+        split = 0.75*Niteration
+        q = 0.25 #indicates the level of randomization in annealing, can be user defined
         for chain in xrange(Nchain):
             # initialize with a random pattern set
             N = sample(xrange(1,8,1),1)[0]
@@ -167,7 +194,8 @@ class BOA(object):
                         for index,rule in enumerate(rules_new):
                             Yhat= ((all_sum - np.array(self.RMatrix[:,rule]))>0).astype(int)
                             TP,FP,TN,FN  = getConfusion(Yhat,self.Y)
-                            p.append(log_betabin(TP,TP+FP,self.alpha_1,self.beta_1) + log_betabin(FN,FN+TN,self.alpha_2,self.beta_2))
+                            p.append(TP.astype(float)/(TP+FP+1))
+                            # p.append(log_betabin(TP,TP+FP,self.alpha_1,self.beta_1) + log_betabin(FN,FN+TN,self.alpha_2,self.beta_2))
                         p = [x - min(p) for x in p]
                         p = np.exp(p)
                         p = np.insert(p,0,0)
@@ -209,7 +237,7 @@ class BOA(object):
                             remove.append(i)
                     for x in remove:
                         rules_norm.remove(x)
-                    return rules_norm
+                    return rules_norm,maps
                         
                 cfmatrix,prob =  self.compute_prob(rules_norm)
                 T = T0**(1 - iter/Niteration)
@@ -217,7 +245,7 @@ class BOA(object):
                 alpha = np.exp(float(pt_new -pt_curr)/T)
                 
                 if pt_new > maps[chain][-1][1]:
-                    maps[chain].append([iter,sum(prob),rules_new,rules_norm])
+                    maps[chain].append([iter,sum(prob),rules_new,rules_norm,[self.rules[i] for i in rules_new],[self.rules[i] for i in rules_norm]])
                     if print_message:
                         TP = cfmatrix[0]
                         FP = cfmatrix[1]
@@ -225,7 +253,7 @@ class BOA(object):
                         FN = cfmatrix[3]
                         tpr = float(TP)/(TP + FN)
                         fpr = float(FP)/(FP + TN)
-                        print '\n** chain = {}, max at iter = {} ** \nTP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n tpr = {}, fpr = {}'.format(chain, iter,cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2],tpr,fpr)
+                        print '\n** chain = {}, max at iter = {} ** \n TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n tpr = {}, fpr = {}'.format(chain, iter,cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2],tpr,fpr)
                         self.print_rules(rules_new)
 
                 if random() <= alpha:
@@ -234,7 +262,7 @@ class BOA(object):
         pt_max = [maps[chain][-1][1] for chain in xrange(Nchain)]
         index = pt_max.index(max(pt_max))
         print '\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time)
-        return maps[index][-1][3]
+        return maps[index][-1][3],maps
 
     def compute_prob(self,rules):
         Yhat = (np.sum(self.RMatrix[:,rules],axis = 1)>0).astype(int)
@@ -245,6 +273,16 @@ class BOA(object):
         likelihood_2 = log_betabin(FN,FN+TN,self.alpha_2,self.beta_2)
         post =  prior_ChsRules +  likelihood_1 + likelihood_2
         return [TP,FP,TN,FN],[prior_ChsRules,likelihood_1,likelihood_2]
+
+    def normalize_add(self, rules_new, rule_index):
+        rules = rules_new[:]
+        for rule in rules_new:
+            if set(self.rules[rule]).issubset(self.rules[rule_index]):
+                return rules_new[:]
+            if set(self.rules[rule_index]).issubset(self.rules[rule]):
+                rules.remove(rule)
+        rules.append(rule_index)
+        return rules
 
     def normalize(self, rules_new):
         try:
@@ -305,10 +343,12 @@ def log_betabin(k,n,alpha,beta):
             raise ValueError
         lbeta = []
         for ki,ni in zip(k,n):
+            # lbeta.append(math.lgamma(ni+1)- math.lgamma(ki+1) - math.lgamma(ni-ki+1) + math.lgamma(ki+alpha) + math.lgamma(ni-ki+beta) - math.lgamma(ni+alpha+beta) + Const)
             lbeta.append(math.lgamma(ki+alpha) + math.lgamma(ni-ki+beta) - math.lgamma(ni+alpha+beta) + Const)
         return np.array(lbeta)
     else:
         return math.lgamma(k+alpha) + math.lgamma(n-k+beta) - math.lgamma(n+alpha+beta) + Const
+        # return math.lgamma(n+1)- math.lgamma(k+1) - math.lgamma(n-k+1) + math.lgamma(k+alpha) + math.lgamma(n-k+beta) - math.lgamma(n+alpha+beta) + Const
 
 def getConfusion(Yhat,Y):
     if len(Yhat)!=len(Y):
@@ -325,3 +365,37 @@ def predict(rules,df):
         Z[i] = (np.sum(df[rule],axis=1)==len(rule)).astype(int)
     Yhat = (np.sum(Z,axis=0)>0).astype(int)
     return Yhat
+
+def extract_rules(tree, feature_names):
+    left      = tree.tree_.children_left
+    right     = tree.tree_.children_right
+    threshold = tree.tree_.threshold
+    features  = [feature_names[i] for i in tree.tree_.feature]
+    # get ids of child nodes
+    idx = np.argwhere(left == -1)[:,0]     
+
+    def recurse(left, right, child, lineage=None):          
+        if lineage is None:
+            lineage = []
+        if child in left:
+            parent = np.where(left == child)[0].item()
+            suffix = '_neg'
+        else:
+            parent = np.where(right == child)[0].item()
+            suffix = ''
+
+        #           lineage.append((parent, split, threshold[parent], features[parent]))
+        lineage.append((features[parent].strip()+suffix))
+
+        if parent == 0:
+            lineage.reverse()
+            return lineage
+        else:
+            return recurse(left, right, parent, lineage)   
+    rules = []
+    for child in idx:
+        rule = []
+        for node in recurse(left, right, child):
+            rule.append(node)
+        rules.append(rule)
+    return rules
