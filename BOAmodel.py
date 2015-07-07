@@ -18,7 +18,6 @@ from sklearn.ensemble import RandomForestClassifier
 
 class BOA(object):
     def __init__(self, binary_data,Y):
-        self.itemMatrix = [[item for item in binary_data.columns if row[item] ==1] for i,row in binary_data.iterrows() ]  
         self.df = binary_data  
         self.Y = Y
         self.attributeLevelNum = defaultdict(int) 
@@ -74,11 +73,11 @@ class BOA(object):
             rules = [list(x) for x in set(tuple(x) for x in rules)]
             print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
         self.screen_rules(rules,df,N) # select the top N rules using secondary criteria, information gain
-        self.patternSpace = self.getPatternSpace()
-        return
+        self.getPatternSpace()
 
     def screen_rules(self,rules,df,N):
         print 'Screening rules using information gain'
+        start_time = time.time()
         itemInd = {}
         for i,name in enumerate(df.columns):
             itemInd[name] = i
@@ -95,12 +94,6 @@ class BOA(object):
         Zpos = [Z[i] for i in np.where(self.Y>0)][0]
         TP = np.array(np.sum(Zpos,axis=0).tolist()[0])
         supp_select = np.where(TP>=self.supp*sum(self.Y)/100)[0]
-        if len(supp_select)<len(rules):
-            rules = [rules[i] for i in supp_select]
-            Z = [[row.tolist()[0][i] for i in supp_select] for row in Z]
-            TP = TP[supp_select]
-        else:
-            Z = [row.tolist()[0] for row in Z]
         FP = np.array(np.sum(Z,axis = 0))[0] - TP
         TN = len(self.Y) - np.sum(self.Y) - FP
         FN = np.sum(self.Y) - TP
@@ -110,9 +103,10 @@ class BOA(object):
         tpr = TP.astype(float)/(TP+FN)
         fpr = FP.astype(float)/(FP+TN)
         cond_entropy = -pp*(p1*np.log(p1)+(1-p1)*np.log(1-p1))-(1-pp)*(p2*np.log(p2)+(1-p2)*np.log(1-p2))
-        select = np.argsort(cond_entropy)[::-1][-N:]
-        self.rules = [rules[i] for i in select]
-        self.RMatrix = [[row[i] for i in select] for row in Z]
+        select = np.argsort(cond_entropy[supp_select])[::-1][-N:]
+        self.rules = [rules[i] for i in supp_select[select]]
+        self.RMatrix = np.array(Z[:,supp_select[select]])
+        print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(self.rules))
 
     def set_parameters(self, a1=100,b1=1,a2=1,b2=100,al=None,bl=None):
         # input al and bl are lists
@@ -133,7 +127,6 @@ class BOA(object):
     def SA_patternbased(self, Niteration = 5000, Nchain = 3,print_message=True):
         print 'Searching for an optimal solution...'
         start_time = time.time()
-        RMatrix = np.matrix(self.RMatrix)
         self.rules_len = [len(rule) for rule in self.rules]
         nRules = len(self.rules)
         print 'There are {} candidate rules'.format(nRules)
@@ -216,7 +209,7 @@ class BOA(object):
                         add_rule = sample(xrange(nRules),1)[0]
                     else:
                         Yhat_neg_index = list(np.where(np.sum(self.RMatrix[:,rules_new],axis = 1)<1)[0])
-                        mat = np.multiply(RMatrix[Yhat_neg_index,:].transpose(),self.Y[Yhat_neg_index]).transpose()
+                        mat = np.multiply(self.RMatrix[Yhat_neg_index,:].transpose(),self.Y[Yhat_neg_index]).transpose()
                         TP = np.array(np.sum(mat,axis = 0).tolist()[0])
                         FP = np.array((np.sum(self.RMatrix[Yhat_neg_index,:],axis = 0) - TP))
                         TN = np.sum(self.Y[Yhat_neg_index]==0)-FP
@@ -253,7 +246,7 @@ class BOA(object):
                         FN = cfmatrix[3]
                         tpr = float(TP)/(TP + FN)
                         fpr = float(FP)/(FP + TN)
-                        print '\n** chain = {}, max at iter = {} ** \n TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n tpr = {}, fpr = {}'.format(chain, iter,cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2],tpr,fpr)
+                        print '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n tpr = {}, fpr = {}'.format(chain, iter,(cfmatrix[0]+cfmatrix[2]+0.0)/len(self.Y),cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2],tpr,fpr)
                         self.print_rules(rules_new)
 
                 if random() <= alpha:
