@@ -33,6 +33,8 @@ class BOA(object):
         print 'Computing sizes for pattern space ...'
         start_time = time.time()
         """ compute the rule space from the levels in each attribute """
+        for item in self.attributeNames:
+            self.attributeLevelNum[item+'_neg'] = self.attributeLevelNum[item]
         self.patternSpace = np.zeros(self.maxlen+1)
         tmp = [ item + '_neg' for item in self.attributeNames]
         self.attributeNames.extend(tmp)
