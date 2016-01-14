@@ -57,8 +57,9 @@ class BOA(object):
             nindex = np.where(self.Y!=1)[0]
             print 'Generating rules using fpgrowth'
             start_time = time.time()
-            rules= fpgrowth([self.itemMatrix[i] for i in pindex],supp = supp,zmin = 1,zmax = maxlen)
-            rules = [rule[0] for rule in rules]
+            rules= fpgrowth([itemMatrix[i] for i in pindex],supp = supp,zmin = 1,zmax = maxlen)
+            rules = [tuple(np.sort(rule[0])) for rule in rules]
+            rules = list(set(rules))
             start_time = time.time()
             print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
         else:
@@ -103,6 +104,9 @@ class BOA(object):
         tpr = TP.astype(float)/(TP+FN)
         fpr = FP.astype(float)/(FP+TN)
         cond_entropy = -pp*(p1*np.log(p1)+(1-p1)*np.log(1-p1))-(1-pp)*(p2*np.log(p2)+(1-p2)*np.log(1-p2))
+        cond_entropy[p1*(1-p1)==0] = -((1-pp)*(p2*np.log(p2)+(1-p2)*np.log(1-p2)))[p1*(1-p1)==0]
+        cond_entropy[p2*(1-p2)==0] = -(pp*(p1*np.log(p1)+(1-p1)*np.log(1-p1)))[p2*(1-p2)==0]
+        cond_entropy[p1*(1-p1)*p2*(1-p2)==0] = 0
         select = np.argsort(cond_entropy[supp_select])[::-1][-N:]
         self.rules = [rules[i] for i in supp_select[select]]
         self.RMatrix = np.array(Z[:,supp_select[select]])
@@ -124,138 +128,135 @@ class BOA(object):
             self.alpha_l=al
             self.beta_l = bl
 
-    def SA_patternbased(self, Niteration = 5000, Nchain = 3,print_message=True):
-        print 'Searching for an optimal solution...'
+def SA_patternbased(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], print_message=True):
+        # print 'Searching for an optimal solution...'
         start_time = time.time()
-        self.rules_len = [len(rule) for rule in self.rules]
         nRules = len(self.rules)
-        print 'There are {} candidate rules'.format(nRules)
+        self.rules_len = [len(rule) for rule in self.rules]
         maps = defaultdict(list)
-        T0 = 100
-        split = 0.75*Niteration
-        q = 0.25 #indicates the level of randomization in annealing, can be user defined
+        T0 = 1000
+        split = 0.7*Niteration
         for chain in xrange(Nchain):
             # initialize with a random pattern set
-            N = sample(xrange(1,8,1),1)[0]
-            rules_curr = sample(xrange(nRules),N)
+            if init !=[]:
+                rules_curr = init[:]
+            else:
+                N = sample(xrange(1,min(8,nRules),1),1)[0]
+                rules_curr = sample(xrange(nRules),N)
             rules_curr_norm = self.normalize(rules_curr)
-            pt_curr = sum(self.compute_prob(rules_curr_norm)[1])
-            maps[chain].append([-1,pt_curr,rules_curr,rules_curr_norm])
+            pt_curr = -10000
+            maps[chain].append([-1,[pt_curr/2,pt_curr/2],rules_curr,[self.rules[i] for i in rules_curr]])
 
             for iter in xrange(Niteration):
-                if iter<split:
-                    rules_new = rules_curr[:]
-                    rules_norm = rules_curr_norm[:]
-                else:
+                if iter>=split:
                     p = np.array(xrange(1+len(maps[chain])))
                     p = np.array(list(accumulate(p)))
                     p = p/p[-1]
                     index = find_lt(p,random())
-                    rules_new = maps[chain][index][2][:]
-                    rules_norm = maps[chain][index][3][:]
-                Yhat = (np.sum(self.RMatrix[:,rules_new],axis = 1)>0).astype(int)
-                incorr = np.where(self.Y!=Yhat)[0]
-                N = len(rules_new)
-                if len(incorr)==0:
-                    clean = True
-                    move = ['clean']
-                    # it means the HBOA correctly classified all points but there could be redundant patterns, so cleaning is needed
-                else:
-                    clean = False
-                    ex = sample(incorr,1)[0]
-                    t = random()
-                    if self.Y[ex]==1 or N==1:
-                        if t<1.0/2 or N==1:
-                            move = ['add']       # action: add
-                        else:
-                            move = ['cut','add'] # action: replace
-                    else:
-                        if t<1.0/2:
-                            move = ['cut']       # action: cut
-                        else:
-                            move = ['cut','add'] # action: replace
-                if move[0]=='cut':
-                    """ cut """
-                    if random()<q:
-                        candidate = list(set(np.where(self.RMatrix[ex,:]==1)[0]).intersection(rules_new))
-                        if len(candidate)==0:
-                            candidate = rules_new
-                        cut_rule = sample(candidate,1)[0]
-                    else:
-                        p = []
-                        all_sum = np.sum(self.RMatrix[:,rules_new],axis = 1)
-                        for index,rule in enumerate(rules_new):
-                            Yhat= ((all_sum - np.array(self.RMatrix[:,rule]))>0).astype(int)
-                            TP,FP,TN,FN  = getConfusion(Yhat,self.Y)
-                            p.append(TP.astype(float)/(TP+FP+1))
-                            # p.append(log_betabin(TP,TP+FP,self.alpha_1,self.beta_1) + log_betabin(FN,FN+TN,self.alpha_2,self.beta_2))
-                        p = [x - min(p) for x in p]
-                        p = np.exp(p)
-                        p = np.insert(p,0,0)
-                        p = np.array(list(accumulate(p)))
-                        if p[-1]==0:
-                            index = sample(xrange(len(rules_new)),1)[0]
-                        else:
-                            p = p/p[-1]
-                        index = find_lt(p,random())
-                        cut_rule = rules_new[index]
-                    rules_new.remove(cut_rule)
-                    rules_norm = self.normalize(rules_new)
-                    move.remove('cut')
-                    
-                if len(move)>0 and move[0]=='add':
-                    """ add """
-                    if random()<q:
-                        add_rule = sample(xrange(nRules),1)[0]
-                    else:
-                        Yhat_neg_index = list(np.where(np.sum(self.RMatrix[:,rules_new],axis = 1)<1)[0])
-                        mat = np.multiply(self.RMatrix[Yhat_neg_index,:].transpose(),self.Y[Yhat_neg_index]).transpose()
-                        TP = np.array(np.sum(mat,axis = 0).tolist()[0])
-                        FP = np.array((np.sum(self.RMatrix[Yhat_neg_index,:],axis = 0) - TP))
-                        TN = np.sum(self.Y[Yhat_neg_index]==0)-FP
-                        FN = sum(self.Y[Yhat_neg_index]) - TP
-                        p = (TP.astype(float)/(TP+FP+1))
-                        p[rules_new]=0
-                        add_rule = sample(np.where(p==max(p))[0],1)[0]
-                    if add_rule not in rules_new:
-                        rules_new.append(add_rule)
-                        rules_norm = self.normalize(rules_new)
-
-                if len(move)>0 and move[0]=='clean':
-                    remove = []
-                    for i,rule in enumerate(rules_norm):
-                        Yhat = (np.sum(self.RMatrix[:,[rule for j,rule in enumerate(rules_norm) if (j!=i and j not in remove)]],axis = 1)>0).astype(int)
-                        TP,FP,TN,FN = getConfusion(Yhat,self.Y)
-                        if TP+FP==0:
-                            remove.append(i)
-                    for x in remove:
-                        rules_norm.remove(x)
-                    return rules_norm,maps
-                        
-                cfmatrix,prob =  self.compute_prob(rules_norm)
+                    rules_curr = maps[chain][index][2][:]
+                    rules_curr_norm = maps[chain][index][2][:]
+                rules_new, rules_norm = self.propose(rules_curr, rules_curr_norm,q)
+                cfmatrix,prob =  self.compute_prob(rules_new)
                 T = T0**(1 - iter/Niteration)
                 pt_new = sum(prob)
                 alpha = np.exp(float(pt_new -pt_curr)/T)
                 
-                if pt_new > maps[chain][-1][1]:
-                    maps[chain].append([iter,sum(prob),rules_new,rules_norm,[self.rules[i] for i in rules_new],[self.rules[i] for i in rules_norm]])
-                    if print_message:
-                        TP = cfmatrix[0]
-                        FP = cfmatrix[1]
-                        TN = cfmatrix[2]
-                        FN = cfmatrix[3]
-                        tpr = float(TP)/(TP + FN)
-                        fpr = float(FP)/(FP + TN)
-                        print '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n tpr = {}, fpr = {}'.format(chain, iter,(cfmatrix[0]+cfmatrix[2]+0.0)/len(self.Y),cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2],tpr,fpr)
-                        self.print_rules(rules_new)
-
+                if pt_new > sum(maps[chain][-1][1]):
+                    maps[chain].append([iter,prob,rules_new,[self.rules[i] for i in rules_new]])
+                    print '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(chain, iter,(cfmatrix[0]+cfmatrix[2]+0.0)/len(self.Y),cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2])
+                    # print '\n** chain = {}, max at iter = {} ** \n obj = {}, prior = {}, llh = {} '.format(chain, iter,prior+llh,prior,llh)
+                    self.print_rules(rules_new)
+                    print rules_new
                 if random() <= alpha:
                     rules_curr_norm,rules_curr,pt_curr = rules_norm[:],rules_new[:],pt_new
-
-        pt_max = [maps[chain][-1][1] for chain in xrange(Nchain)]
+        pt_max = [sum(maps[chain][-1][1]) for chain in xrange(Nchain)]
         index = pt_max.index(max(pt_max))
-        print '\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time)
-        return maps[index][-1][3],maps
+        # print '\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time)
+        return maps[index][-1][2],maps[index]
+
+    def propose(self, rules_curr,rules_norm,q):
+        q = 0.25 #indicates the level of randomization in annealing, can be user defined
+        nRules = len(self.rules)
+        Yhat = (np.sum(self.RMatrix[:,rules_curr],axis = 1)>0).astype(int)
+        incorr = np.where(self.Y!=Yhat)[0]
+        N = len(rules_curr)
+        if len(incorr)==0:
+            clean = True
+            move = ['clean']
+            # it means the HBOA correctly classified all points but there could be redundant patterns, so cleaning is needed
+        else:
+            clean = False
+            ex = sample(incorr,1)[0]
+            t = random()
+            if self.Y[ex]==1 or N==1:
+                if t<1.0/2 or N==1:
+                    move = ['add']       # action: add
+                else:
+                    move = ['cut','add'] # action: replace
+            else:
+                if t<1.0/2:
+                    move = ['cut']       # action: cut
+                else:
+                    move = ['cut','add'] # action: replace
+        if move[0]=='cut':
+            """ cut """
+            if random()<q:
+                candidate = list(set(np.where(self.RMatrix[ex,:]==1)[0]).intersection(rules_curr))
+                if len(candidate)==0:
+                    candidate = rules_curr
+                cut_rule = sample(candidate,1)[0]
+            else:
+                p = []
+                all_sum = np.sum(self.RMatrix[:,rules_curr],axis = 1)
+                for index,rule in enumerate(rules_curr):
+                    Yhat= ((all_sum - np.array(self.RMatrix[:,rule]))>0).astype(int)
+                    TP,FP,TN,FN  = getConfusion(Yhat,self.Y)
+                    p.append(TP.astype(float)/(TP+FP+1))
+                    # p.append(log_betabin(TP,TP+FP,self.alpha_1,self.beta_1) + log_betabin(FN,FN+TN,self.alpha_2,self.beta_2))
+                p = [x - min(p) for x in p]
+                p = np.exp(p)
+                p = np.insert(p,0,0)
+                p = np.array(list(accumulate(p)))
+                if p[-1]==0:
+                    index = sample(xrange(len(rules_curr)),1)[0]
+                else:
+                    p = p/p[-1]
+                index = find_lt(p,random())
+                cut_rule = rules_curr[index]
+            rules_curr.remove(cut_rule)
+            rules_norm = self.normalize(rules_curr)
+            move.remove('cut')
+            
+        if len(move)>0 and move[0]=='add':
+            """ add """
+            if random()<q:
+                add_rule = sample(xrange(nRules),1)[0]
+            else: 
+                Yhat_neg_index = list(np.where(np.sum(self.RMatrix[:,rules_curr],axis = 1)<1)[0])
+                mat = np.multiply(self.RMatrix[Yhat_neg_index,:].transpose(),self.Y[Yhat_neg_index])
+                # TP = np.array(np.sum(mat,axis = 0).tolist()[0])
+                TP = np.sum(mat,axis = 1)
+                FP = np.array((np.sum(self.RMatrix[Yhat_neg_index,:],axis = 0) - TP))
+                TN = np.sum(self.Y[Yhat_neg_index]==0)-FP
+                FN = sum(self.Y[Yhat_neg_index]) - TP
+                p = (TP.astype(float)/(TP+FP+1))
+                p[rules_curr]=0
+                add_rule = sample(np.where(p==max(p))[0],1)[0]
+            if add_rule not in rules_curr:
+                rules_curr.append(add_rule)
+                rules_norm = self.normalize(rules_curr)
+
+        if len(move)>0 and move[0]=='clean':
+            remove = []
+            for i,rule in enumerate(rules_norm):
+                Yhat = (np.sum(self.RMatrix[:,[rule for j,rule in enumerate(rules_norm) if (j!=i and j not in remove)]],axis = 1)>0).astype(int)
+                TP,FP,TN,FN = getConfusion(Yhat,self.Y)
+                if TP+FP==0:
+                    remove.append(i)
+            for x in remove:
+                rules_norm.remove(x)
+            return rules_curr, rules_norm
+        return rules_curr, rules_norm
 
     def compute_prob(self,rules):
         Yhat = (np.sum(self.RMatrix[:,rules],axis = 1)>0).astype(int)
@@ -264,7 +265,6 @@ class BOA(object):
         prior_ChsRules= sum([log_betabin(Kn_count[i],self.patternSpace[i],self.alpha_l[i],self.beta_l[i]) for i in xrange(1,len(Kn_count),1)])            
         likelihood_1 =  log_betabin(TP,TP+FP,self.alpha_1,self.beta_1)
         likelihood_2 = log_betabin(FN,FN+TN,self.alpha_2,self.beta_2)
-        post =  prior_ChsRules +  likelihood_1 + likelihood_2
         return [TP,FP,TN,FN],[prior_ChsRules,likelihood_1,likelihood_2]
 
     def normalize_add(self, rules_new, rule_index):
