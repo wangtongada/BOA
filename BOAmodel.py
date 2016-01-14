@@ -264,7 +264,7 @@ class BOA(object):
         Kn_count = list(np.bincount([self.rules_len[x] for x in rules], minlength = self.maxlen+1))
         prior_ChsRules= sum([log_betabin(Kn_count[i],self.patternSpace[i],self.alpha_l[i],self.beta_l[i]) for i in xrange(1,len(Kn_count),1)])            
         likelihood_1 =  log_betabin(TP,TP+FP,self.alpha_1,self.beta_1)
-        likelihood_2 = log_betabin(FN,FN+TN,self.alpha_2,self.beta_2)
+        likelihood_2 = log_betabin(TN,FN+TN,self.alpha_2,self.beta_2)
         return [TP,FP,TN,FN],[prior_ChsRules,likelihood_1,likelihood_2]
 
     def normalize_add(self, rules_new, rule_index):

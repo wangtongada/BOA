@@ -13,10 +13,12 @@ Nchain = 3         # number of chains in the simulated annealing search algorith
 
 supp = 5           # 5% is a generally good number. The higher this supp, the 'larger' a pattern is
 maxlen = 3         # maxmum length of a pattern
+
+# \rho = alpha/(alpha+beta). Make sure \rho is close to one when choosing alpha and beta. 
 alpha_1 = 500       # alpha_+
 beta_1 = 1          # beta_+
-alpha_2 = 1         # alpha_-
-beta_2 = 500        # beta_-
+alpha_2 = 500         # alpha_-
+beta_2 = 1       # beta_-
 
 """ input file """
 # notice that in the example, X is already binary coded. 
