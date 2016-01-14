@@ -34,6 +34,8 @@ class BOA(object):
         start_time = time.time()
         """ compute the rule space from the levels in each attribute """
         self.patternSpace = np.zeros(self.maxlen+1)
+        tmp = [ item + '_neg' for item in self.attributeNames]
+        self.attributeNames.extend(tmp)
         for k in xrange(1,self.maxlen+1,1):
             for subset in combinations(self.attributeNames,k):
                 tmp = 1
