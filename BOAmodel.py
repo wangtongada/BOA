@@ -167,10 +167,11 @@ class BOA(object):
                 
                 if pt_new > sum(maps[chain][-1][1]):
                     maps[chain].append([iter,prob,rules_new,[self.rules[i] for i in rules_new]])
-                    print '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(chain, iter,(cfmatrix[0]+cfmatrix[2]+0.0)/len(self.Y),cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2])
-                    # print '\n** chain = {}, max at iter = {} ** \n obj = {}, prior = {}, llh = {} '.format(chain, iter,prior+llh,prior,llh)
-                    self.print_rules(rules_new)
-                    print rules_new
+                    if print_message:
+                        print '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(chain, iter,(cfmatrix[0]+cfmatrix[2]+0.0)/len(self.Y),cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2])
+                        # print '\n** chain = {}, max at iter = {} ** \n obj = {}, prior = {}, llh = {} '.format(chain, iter,prior+llh,prior,llh)
+                        self.print_rules(rules_new)
+                        print rules_new
                 if random() <= alpha:
                     rules_curr_norm,rules_curr,pt_curr = rules_norm[:],rules_new[:],pt_new
         pt_max = [sum(maps[chain][-1][1]) for chain in xrange(Nchain)]
