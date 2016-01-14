@@ -6,10 +6,12 @@ from collections import defaultdict
 
 
 """ parameters """
+# The following parameters are recommended to change depending on the size and complexity of the data
 N = 2000      # number of rules to be used in SA_patternbased and also the output of generate_rules
 Niteration = 5000  # number of iterations in each chain
 Nchain = 3         # number of chains in the simulated annealing search algorithm
-supp = 5           # 5%
+
+supp = 5           # 5% is a generally good number. The higher this supp, the 'larger' a pattern is
 maxlen = 3         # maxmum length of a pattern
 alpha_1 = 500       # alpha_+
 beta_1 = 1          # beta_+
