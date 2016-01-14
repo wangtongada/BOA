@@ -128,7 +128,7 @@ class BOA(object):
             self.alpha_l=al
             self.beta_l = bl
 
-def SA_patternbased(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], print_message=True):
+    def SA_patternbased(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], print_message=True):
         # print 'Searching for an optimal solution...'
         start_time = time.time()
         nRules = len(self.rules)
