@@ -354,8 +354,11 @@ def getConfusion(Yhat,Y):
 
 def predict(rules,df):
     Z = [[] for rule in rules]
+    dfn = 1-df #df has negative associations
+    dfn.columns = [name.strip() + '_neg' for name in df.columns]
+    df = pd.concat([df,dfn],axis = 1)
     for i,rule in enumerate(rules):
-        Z[i] = (np.sum(df[rule],axis=1)==len(rule)).astype(int)
+        Z[i] = (np.sum(df[list(rule)],axis=1)==len(rule)).astype(int)
     Yhat = (np.sum(Z,axis=0)>0).astype(int)
     return Yhat
 
