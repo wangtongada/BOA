@@ -145,7 +145,7 @@ class BOA(object):
                 rules_curr = sample(xrange(nRules),N)
             rules_curr_norm = self.normalize(rules_curr)
             pt_curr = -10000
-            maps[chain].append([-1,[pt_curr/2,pt_curr/2],rules_curr,[self.rules[i] for i in rules_curr]])
+            maps[chain].append([-1,[pt_curr/3,pt_curr/3,pt_curr/3],rules_curr,[self.rules[i] for i in rules_curr]])
 
             for iter in xrange(Niteration):
                 if iter>=split:
@@ -172,7 +172,7 @@ class BOA(object):
         pt_max = [sum(maps[chain][-1][1]) for chain in xrange(Nchain)]
         index = pt_max.index(max(pt_max))
         # print '\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time)
-        return maps[index][-1][2],maps[index]
+        return maps[index][-1][3]
 
     def propose(self, rules_curr,rules_norm,q):
         q = 0.25 #indicates the level of randomization in annealing, can be user defined
