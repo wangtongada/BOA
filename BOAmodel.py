@@ -180,7 +180,6 @@ class BOA(object):
         return maps[index][-1][3]
 
     def propose(self, rules_curr,rules_norm,q):
-        q = 0.25 #indicates the level of randomization in annealing, can be user defined
         nRules = len(self.rules)
         Yhat = (np.sum(self.RMatrix[:,rules_curr],axis = 1)>0).astype(int)
         incorr = np.where(self.Y!=Yhat)[0]
