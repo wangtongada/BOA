@@ -39,10 +39,7 @@ model.set_parameters(alpha_1,beta_1,alpha_2,beta_2,None,None)
 rules = model.SA_patternbased(Niteration,Nchain,print_message=True)
 
 # test
-Xtestn = 1-df.iloc[test_index]
-Xtestn.columns = df.columns + '_neg'
-Xtest = pd.concat([df.iloc[test_index],Xtestn],axis = 1)
-Yhat = predict(rules,Xtest)
+Yhat = predict(rules,df.iloc[test_index])
 TP,FP,TN,FN = getConfusion(Yhat,Y[test_index])
 tpr = float(TP)/(TP+FN)
 fpr = float(FP)/(FP+TN)
