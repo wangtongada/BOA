@@ -148,7 +148,7 @@ class BOA(object):
                 N = sample(xrange(1,min(8,nRules),1),1)[0]
                 rules_curr = sample(xrange(nRules),N)
             rules_curr_norm = self.normalize(rules_curr)
-            pt_curr = -10000
+            pt_curr = -100000000000
             maps[chain].append([-1,[pt_curr/3,pt_curr/3,pt_curr/3],rules_curr,[self.rules[i] for i in rules_curr]])
 
             for iter in xrange(Niteration):
