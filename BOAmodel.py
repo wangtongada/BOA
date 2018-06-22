@@ -159,7 +159,7 @@ class BOA(object):
                     index = find_lt(p,random())
                     rules_curr = maps[chain][index][2][:]
                     rules_curr_norm = maps[chain][index][2][:]
-                rules_new, rules_norm = self.propose(rules_curr, rules_curr_norm,q)
+                rules_new, rules_norm = self.propose(rules_curr[:], rules_curr_norm[:],q)
                 cfmatrix,prob =  self.compute_prob(rules_new)
                 T = T0**(1 - iter/Niteration)
                 pt_new = sum(prob)
