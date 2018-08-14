@@ -13,6 +13,7 @@ Wang, T., Rudin, C., Doshi-Velez, F., Liu, Y., Klampfl, E., & MacNeille, P. (201
 Wang, T., Rudin, C., Velez-Doshi, F., Liu, Y., Klampfl, E., & MacNeille, P. (2016, December). Bayesian rule sets for interpretable classification. In 2016 IEEE 16th International Conference on Data Mining (ICDM) (pp. 1269-1274). IEEE.
 
 ###INPUT
+
 The main code to be run by the user is example.py. This example.py uses input training data to generate ruled and then search for the optimal BRS using simmulated annealing. At the end of the file the true positive rate and false positive rate is computed to show the performance.
 Notice that the input data has to be binary coded and the column names have to have the form 'attributename_attributevalue'. If your data is not binary coded, for example attributename #color has values {red, blue, yellow}, and an item "red" can be coded as "color_red"=1, "color_blue"=0, "color_yellow"=0. (The last two are optional. Usually including the absent/negative #items improve the predicting accuracy. Our example code does not use it for simplicity)
 
