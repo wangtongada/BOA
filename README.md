@@ -12,8 +12,7 @@ Wang, T., Rudin, C., Doshi-Velez, F., Liu, Y., Klampfl, E., & MacNeille, P. (201
 
 Wang, T., Rudin, C., Velez-Doshi, F., Liu, Y., Klampfl, E., & MacNeille, P. (2016, December). Bayesian rule sets for interpretable classification. In 2016 IEEE 16th International Conference on Data Mining (ICDM) (pp. 1269-1274). IEEE.
 
-###INPUT
-
+### INPUT
 The main code to be run by the user is example.py. This example.py uses input training data to generate ruled and then search for the optimal BRS using simmulated annealing. At the end of the file the true positive rate and false positive rate is computed to show the performance.
 Notice that the input data has to be binary coded and the column names have to have the form 'attributename_attributevalue'. If your data is not binary coded, for example attributename #color has values {red, blue, yellow}, and an item "red" can be coded as "color_red"=1, "color_blue"=0, "color_yellow"=0. (The last two are optional. Usually including the absent/negative #items improve the predicting accuracy. Our example code does not use it for simplicity)
 
@@ -30,6 +29,6 @@ Notice that the input data has to be binary coded and the column names have to h
 - Nchain    : The number of chains in simmulated annealing
 - alpha_1,beta_1,alpha_2,beta_2,alpha_l,beta_l: correspond to alpha_+,beta_+,alpha_-, beta_-,alpha_l and beta_l in the paper. The general principle of setting these parameters is: 1) alpha_1/beta_1 need to be close to one and alpha_2/beta_2 need to be close to 0. 2) Changing the sum alpha_1, beta_1 and the sum of alpha_2, beta_2 will generate different points on a ROC curve
 
-###OUTPUT
+### OUTPUT
 
 The function generate_rules generates patterns that satisfy the minimum support and maximum length and then select the Nrules rules that have the highest entropy. In function SA_patternbased, each local maximum is stored in maps and the best BOA is returned. Remember here the BOA contains only the index of selected rules from Nrules self.rules 
