@@ -143,7 +143,7 @@ class BOA(object):
         for chain in xrange(Nchain):
             # initialize with a random pattern set
             if init !=[]:
-                rules_curr = init[:]
+                rules_curr = init.copy()
             else:
                 N = sample(xrange(1,min(8,nRules),1),1)[0]
                 rules_curr = sample(xrange(nRules),N)
@@ -157,9 +157,9 @@ class BOA(object):
                     p = np.array(list(accumulate(p)))
                     p = p/p[-1]
                     index = find_lt(p,random())
-                    rules_curr = maps[chain][index][2][:]
-                    rules_curr_norm = maps[chain][index][2][:]
-                rules_new, rules_norm = self.propose(rules_curr[:], rules_curr_norm[:],q)
+                    rules_curr = maps[chain][index][2].copy()
+                    rules_curr_norm = maps[chain][index][2].copy()
+                rules_new, rules_norm = self.propose(rules_curr.copy(), rules_curr_norm.copy(),q)
                 cfmatrix,prob =  self.compute_prob(rules_new)
                 T = T0**(1 - iter/Niteration)
                 pt_new = sum(prob)
@@ -173,7 +173,7 @@ class BOA(object):
                         self.print_rules(rules_new)
                         print rules_new
                 if random() <= alpha:
-                    rules_curr_norm,rules_curr,pt_curr = rules_norm[:],rules_new[:],pt_new
+                    rules_curr_norm,rules_curr,pt_curr = rules_norm.copy(),rules_new.copy(),pt_new
         pt_max = [sum(maps[chain][-1][1]) for chain in xrange(Nchain)]
         index = pt_max.index(max(pt_max))
         # print '\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time)
@@ -272,10 +272,10 @@ class BOA(object):
         return [TP,FP,TN,FN],[prior_ChsRules,likelihood_1,likelihood_2]
 
     def normalize_add(self, rules_new, rule_index):
-        rules = rules_new[:]
+        rules = rules_new.copy()
         for rule in rules_new:
             if set(self.rules[rule]).issubset(self.rules[rule_index]):
-                return rules_new[:]
+                return rules_new.copy()
             if set(self.rules[rule_index]).issubset(self.rules[rule]):
                 rules.remove(rule)
         rules.append(rule_index)
@@ -293,9 +293,9 @@ class BOA(object):
                         p1 -= 1
                         break
                 p1 += 1
-            return rules[:]
+            return rules
         except:
-            return rules_new[:]
+            return rules_new.copy()
 
 
     def print_rules(self, rules_max):
