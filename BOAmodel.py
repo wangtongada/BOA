@@ -129,8 +129,8 @@ class BOA(object):
             self.alpha_l = [10 for i in xrange(self.maxlen+1)]
             self.beta_l= [10*self.patternSpace[i]/self.C[i] for i in xrange(self.maxlen+1)]
         else:
-            self.alpha_l=al
-            self.beta_l = bl
+            self.alpha_l=[1] + list(al)
+            self.beta_l = [1] + list(bl)
 
     def SA_patternbased(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], print_message=True):
         # print 'Searching for an optimal solution...'
