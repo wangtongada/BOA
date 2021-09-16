@@ -30,7 +30,7 @@ class BOA(object):
         
 
     def getPatternSpace(self):
-        print 'Computing sizes for pattern space ...'
+        print('Computing sizes for pattern space ...')
         start_time = time.time()
         """ compute the rule space from the levels in each attribute """
         for item in self.attributeNames:
@@ -44,7 +44,7 @@ class BOA(object):
                 for i in subset:
                     tmp = tmp * self.attributeLevelNum[i]
                 self.patternSpace[k] = self.patternSpace[k] + tmp
-        print '\tTook %0.3fs to compute patternspace' % (time.time() - start_time)               
+        print('\tTook %0.3fs to compute patternspace' % (time.time() - start_time))               
 
 # This function generates rules that satisfy supp and maxlen using fpgrowth, then it selects the top N rules that make data have the biggest decrease in entropy
 # there are two ways to generate rules. fpgrowth can handle cases where the maxlen is small. If maxlen<=3, fpgrowth can generates rules much faster than randomforest. 
@@ -59,13 +59,13 @@ class BOA(object):
             itemMatrix = [[item for item in df.columns if row[item] ==1] for i,row in df.iterrows() ]  
             pindex = np.where(self.Y==1)[0]
             nindex = np.where(self.Y!=1)[0]
-            print 'Generating rules using fpgrowth'
+            print('Generating rules using fpgrowth')
             start_time = time.time()
             rules= fpgrowth([itemMatrix[i] for i in pindex],supp = supp,zmin = 1,zmax = maxlen)
             rules = [tuple(np.sort(rule[0])) for rule in rules]
             rules = list(set(rules))
             start_time = time.time()
-            print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
+            print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules)))
         else:
             rules = []
             start_time = time.time()
@@ -76,12 +76,12 @@ class BOA(object):
                 for n in xrange(n_estimators):
                     rules.extend(extract_rules(clf.estimators_[n],df.columns))
             rules = [list(x) for x in set(tuple(x) for x in rules)]
-            print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules))
+            print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules)))
         self.screen_rules(rules,df,N) # select the top N rules using secondary criteria, information gain
         self.getPatternSpace()
 
     def screen_rules(self,rules,df,N):
-        print 'Screening rules using information gain'
+        print('Screening rules using information gain')
         start_time = time.time()
         itemInd = {}
         for i,name in enumerate(df.columns):
@@ -114,7 +114,7 @@ class BOA(object):
         select = np.argsort(cond_entropy[supp_select])[::-1][-N:]
         self.rules = [rules[i] for i in supp_select[select]]
         self.RMatrix = np.array(Z[:,supp_select[select]])
-        print '\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(self.rules))
+        print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(self.rules)))
 
     def set_parameters(self, a1=100,b1=1,a2=1,b2=100,al=None,bl=None):
         # input al and bl are lists
@@ -133,7 +133,7 @@ class BOA(object):
             self.beta_l = [1] + list(bl)
 
     def fit(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], print_message=True):
-        # print 'Searching for an optimal solution...'
+        # print('Searching for an optimal solution...')
         start_time = time.time()
         nRules = len(self.rules)
         self.rules_len = [len(rule) for rule in self.rules]
@@ -176,7 +176,7 @@ class BOA(object):
                     rules_curr_norm,rules_curr,pt_curr = rules_norm.copy(),rules_new.copy(),pt_new
         pt_max = [sum(maps[chain][-1][1]) for chain in xrange(Nchain)]
         index = pt_max.index(max(pt_max))
-        # print '\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time)
+        # print('\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time))
         return maps[index][-1][3]
 
     def propose(self, rules_curr,rules_norm,q):
@@ -318,7 +318,7 @@ def find_lt(a, x):
     i = bisect_left(a, x)
     if i:
         return int(i-1)
-    print 'in find_lt,{}'.format(a)
+    print('in find_lt,{}'.format(a))
     raise ValueError
 
 
