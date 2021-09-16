@@ -36,7 +36,7 @@ test_index = [i for i in xrange(lenY) if i not in train_index]
 model = BOA(df.iloc[train_index],Y[train_index])
 model.generate_rules(supp,maxlen,N)
 model.set_parameters(alpha_1,beta_1,alpha_2,beta_2,None,None)
-rules = model.SA_patternbased(Niteration,Nchain,print_message=True)
+rules = model.fit(Niteration,Nchain,print_message=True)
 
 # test
 Yhat = predict(rules,df.iloc[test_index])
