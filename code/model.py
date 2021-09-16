@@ -185,10 +185,10 @@ class BOA(object):
         if len(incorr)==0:
             clean = True
             move = ['clean']
-            # it means the HBOA correctly classified all points but there could be redundant patterns, so cleaning is needed
+            # it means the BOA correctly classified all points but there could be redundant patterns, so cleaning is needed
         else:
             clean = False
-            ex = sample(incorr,1)[0]
+            ex = sample(incorr.tolist(),1)[0]
             t = random()
             if self.Y[ex]==1 or N==1:
                 if t<1.0/2 or N==1:
@@ -243,7 +243,7 @@ class BOA(object):
                 FN = sum(self.Y[Yhat_neg_index]) - TP
                 p = (TP.astype(float)/(TP+FP+1))
                 p[rules_curr]=0
-                add_rule = sample(np.where(p==max(p))[0],1)[0]
+                add_rule = sample(np.where(p==max(p))[0].tolist(),1)[0]
             if add_rule not in rules_curr:
                 rules_curr.append(add_rule)
                 rules_norm = self.normalize(rules_curr)
