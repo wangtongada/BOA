@@ -38,7 +38,7 @@ class BOA(object):
         self.patternSpace = np.zeros(self.maxlen+1)
         tmp = [ item + '_neg' for item in self.attributeNames]
         self.attributeNames.extend(tmp)
-        for k in xrange(1,self.maxlen+1,1):
+        for k in range(1,self.maxlen+1,1):
             for subset in combinations(self.attributeNames,k):
                 tmp = 1
                 for i in subset:
@@ -69,7 +69,7 @@ class BOA(object):
         else:
             rules = []
             start_time = time.time()
-            for length in xrange(1,maxlen+1,1):
+            for length in range(1,maxlen+1,1):
                 n_estimators = min(pow(df.shape[1],length),4000)
                 clf = RandomForestClassifier(n_estimators = n_estimators,max_depth = length)
                 clf.fit(self.df,self.Y)
