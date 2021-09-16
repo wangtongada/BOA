@@ -123,7 +123,7 @@ class BOA(object):
         self.alpha_2 = a2
         self.beta_2 = b2
         if al ==None or bl==None or len(al)!=self.maxlen or len(bl)!=self.maxlen:
-            print 'No or wrong input for alpha_l and beta_l. The model will use default parameters!'
+            print('No or wrong input for alpha_l and beta_l. The model will use default parameters!')
             self.C = [1.0/self.maxlen for i in xrange(self.maxlen)]
             self.C.insert(0,-1)
             self.alpha_l = [10 for i in xrange(self.maxlen+1)]
@@ -168,10 +168,10 @@ class BOA(object):
                 if pt_new > sum(maps[chain][-1][1]):
                     maps[chain].append([iter,prob,rules_new,[self.rules[i] for i in rules_new]])
                     if print_message:
-                        print '\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(chain, iter,(cfmatrix[0]+cfmatrix[2]+0.0)/len(self.Y),cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2])
+                        print('\n** chain = {}, max at iter = {} ** \n accuracy = {}, TP = {},FP = {}, TN = {}, FN = {}\n pt_new is {}, prior_ChsRules={}, likelihood_1 = {}, likelihood_2 = {}\n '.format(chain, iter,(cfmatrix[0]+cfmatrix[2]+0.0)/len(self.Y),cfmatrix[0],cfmatrix[1],cfmatrix[2],cfmatrix[3],sum(prob), prob[0], prob[1], prob[2]))
                         # print '\n** chain = {}, max at iter = {} ** \n obj = {}, prior = {}, llh = {} '.format(chain, iter,prior+llh,prior,llh)
                         self.print_rules(rules_new)
-                        print rules_new
+                        print(rules_new)
                 if random() <= alpha:
                     rules_curr_norm,rules_curr,pt_curr = rules_norm.copy(),rules_new.copy(),pt_new
         pt_max = [sum(maps[chain][-1][1]) for chain in xrange(Nchain)]
@@ -300,7 +300,7 @@ class BOA(object):
 
     def print_rules(self, rules_max):
         for rule_index in rules_max:
-            print self.rules[rule_index]
+            print(self.rules[rule_index])
 
 def accumulate(iterable, func=operator.add):
     'Return running totals'
@@ -333,10 +333,10 @@ def log_betabin(k,n,alpha,beta):
     try:
         Const =  math.lgamma(alpha + beta) - math.lgamma(alpha) - math.lgamma(beta)
     except:
-        print 'alpha = {}, beta = {}'.format(alpha,beta)
+        print('alpha = {}, beta = {}'.format(alpha,beta))
     if isinstance(k,list) or isinstance(k,np.ndarray):
         if len(k)!=len(n):
-            print 'length of k is %d and length of n is %d'%(len(k),len(n))
+            print('length of k is %d and length of n is %d'%(len(k),len(n)))
             raise ValueError
         lbeta = []
         for ki,ni in zip(k,n):
