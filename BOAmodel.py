@@ -5,9 +5,7 @@ import math
 from itertools import chain, combinations
 import itertools
 from numpy.random import random
-from bisect import bisect_left
 from random import sample
-from scipy.stats.distributions import poisson, gamma, beta, bernoulli, binom
 import time
 import operator
 from collections import Counter, defaultdict
@@ -73,7 +71,7 @@ class BOA(object):
                 n_estimators = min(pow(df.shape[1],length),4000)
                 clf = RandomForestClassifier(n_estimators = n_estimators,max_depth = length)
                 clf.fit(self.df,self.Y)
-                for n in xrange(n_estimators):
+                for n in range(n_estimators):
                     rules.extend(extract_rules(clf.estimators_[n],df.columns))
             rules = [list(x) for x in set(tuple(x) for x in rules)]
             print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules)))
@@ -94,7 +92,7 @@ class BOA(object):
         data = np.ones(len(indices))
         ruleMatrix = csc_matrix((data,indices,indptr),shape = (len(df.columns),len(rules)))
         mat = np.matrix(df) * ruleMatrix
-        lenMatrix = np.matrix([len_rules for i in xrange(df.shape[0])])
+        lenMatrix = np.matrix([len_rules for i in range(df.shape[0])])
         Z =  (mat ==lenMatrix).astype(int)
         Zpos = [Z[i] for i in np.where(self.Y>0)][0]
         TP = np.array(np.sum(Zpos,axis=0).tolist()[0])
@@ -124,10 +122,10 @@ class BOA(object):
         self.beta_2 = b2
         if al ==None or bl==None or len(al)!=self.maxlen or len(bl)!=self.maxlen:
             print('No or wrong input for alpha_l and beta_l. The model will use default parameters!')
-            self.C = [1.0/self.maxlen for i in xrange(self.maxlen)]
+            self.C = [1.0/self.maxlen for i in range(self.maxlen)]
             self.C.insert(0,-1)
-            self.alpha_l = [10 for i in xrange(self.maxlen+1)]
-            self.beta_l= [10*self.patternSpace[i]/self.C[i] for i in xrange(self.maxlen+1)]
+            self.alpha_l = [10 for i in range(self.maxlen+1)]
+            self.beta_l= [10*self.patternSpace[i]/self.C[i] for i in range(self.maxlen+1)]
         else:
             self.alpha_l=[1] + list(al)
             self.beta_l = [1] + list(bl)
@@ -140,20 +138,20 @@ class BOA(object):
         maps = defaultdict(list)
         T0 = 1000
         split = 0.7*Niteration
-        for chain in xrange(Nchain):
+        for chain in range(Nchain):
             # initialize with a random pattern set
             if init !=[]:
                 rules_curr = init.copy()
             else:
-                N = sample(xrange(1,min(8,nRules),1),1)[0]
-                rules_curr = sample(xrange(nRules),N)
+                N = sample(range(1,min(8,nRules),1),1)[0]
+                rules_curr = sample(range(nRules),N)
             rules_curr_norm = self.normalize(rules_curr)
             pt_curr = -100000000000
             maps[chain].append([-1,[pt_curr/3,pt_curr/3,pt_curr/3],rules_curr,[self.rules[i] for i in rules_curr]])
 
-            for iter in xrange(Niteration):
+            for iter in range(Niteration):
                 if iter>=split:
-                    p = np.array(xrange(1+len(maps[chain])))
+                    p = np.array(range(1+len(maps[chain])))
                     p = np.array(list(accumulate(p)))
                     p = p/p[-1]
                     index = find_lt(p,random())
@@ -174,7 +172,7 @@ class BOA(object):
                         print(rules_new)
                 if random() <= alpha:
                     rules_curr_norm,rules_curr,pt_curr = rules_norm.copy(),rules_new.copy(),pt_new
-        pt_max = [sum(maps[chain][-1][1]) for chain in xrange(Nchain)]
+        pt_max = [sum(maps[chain][-1][1]) for chain in range(Nchain)]
         index = pt_max.index(max(pt_max))
         # print('\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time))
         return maps[index][-1][3]
@@ -222,7 +220,7 @@ class BOA(object):
                 p = np.insert(p,0,0)
                 p = np.array(list(accumulate(p)))
                 if p[-1]==0:
-                    index = sample(xrange(len(rules_curr)),1)[0]
+                    index = sample(range(len(rules_curr)),1)[0]
                 else:
                     p = p/p[-1]
                 index = find_lt(p,random())
@@ -234,7 +232,7 @@ class BOA(object):
         if len(move)>0 and move[0]=='add':
             """ add """
             if random()<q:
-                add_rule = sample(xrange(nRules),1)[0]
+                add_rule = sample(range(nRules),1)[0]
             else: 
                 Yhat_neg_index = list(np.where(np.sum(self.RMatrix[:,rules_curr],axis = 1)<1)[0])
                 mat = np.multiply(self.RMatrix[Yhat_neg_index,:].transpose(),self.Y[Yhat_neg_index])
@@ -266,7 +264,7 @@ class BOA(object):
         Yhat = (np.sum(self.RMatrix[:,rules],axis = 1)>0).astype(int)
         TP,FP,TN,FN = getConfusion(Yhat,self.Y)
         Kn_count = list(np.bincount([self.rules_len[x] for x in rules], minlength = self.maxlen+1))
-        prior_ChsRules= sum([log_betabin(Kn_count[i],self.patternSpace[i],self.alpha_l[i],self.beta_l[i]) for i in xrange(1,len(Kn_count),1)])            
+        prior_ChsRules= sum([log_betabin(Kn_count[i],self.patternSpace[i],self.alpha_l[i],self.beta_l[i]) for i in range(1,len(Kn_count),1)])            
         likelihood_1 =  log_betabin(TP,TP+FP,self.alpha_1,self.beta_1)
         likelihood_2 = log_betabin(TN,FN+TN,self.alpha_2,self.beta_2)
         return [TP,FP,TN,FN],[prior_ChsRules,likelihood_1,likelihood_2]
@@ -287,7 +285,7 @@ class BOA(object):
             rules = [rules_new[i] for i in np.argsort(rules_len)[::-1][:len(rules_len)]]
             p1 = 0
             while p1<len(rules):
-                for p2 in xrange(p1+1,len(rules),1):
+                for p2 in range(p1+1,len(rules),1):
                     if set(self.rules[rules[p2]]).issubset(set(self.rules[rules[p1]])):
                         rules.remove(rules[p1])
                         p1 -= 1
@@ -302,100 +300,3 @@ class BOA(object):
         for rule_index in rules_max:
             print(self.rules[rule_index])
 
-def accumulate(iterable, func=operator.add):
-    'Return running totals'
-    # accumulate([1,2,3,4,5]) --> 1 3 6 10 15
-    # accumulate([1,2,3,4,5], operator.mul) --> 1 2 6 24 120
-    it = iter(iterable)
-    total = next(it)
-    yield total
-    for element in it:
-        total = func(total, element)
-        yield total
-
-def find_lt(a, x):
-    """ Find rightmost value less than x"""
-    i = bisect_left(a, x)
-    if i:
-        return int(i-1)
-    print('in find_lt,{}'.format(a))
-    raise ValueError
-
-
-def log_gampoiss(k,alpha,beta):
-    import math
-    k = int(k)
-    return math.lgamma(k+alpha)+alpha*np.log(beta)-math.lgamma(alpha)-math.lgamma(k+1)-(alpha+k)*np.log(1+beta)
-
-
-def log_betabin(k,n,alpha,beta):
-    import math
-    try:
-        Const =  math.lgamma(alpha + beta) - math.lgamma(alpha) - math.lgamma(beta)
-    except:
-        print('alpha = {}, beta = {}'.format(alpha,beta))
-    if isinstance(k,list) or isinstance(k,np.ndarray):
-        if len(k)!=len(n):
-            print('length of k is %d and length of n is %d'%(len(k),len(n)))
-            raise ValueError
-        lbeta = []
-        for ki,ni in zip(k,n):
-            # lbeta.append(math.lgamma(ni+1)- math.lgamma(ki+1) - math.lgamma(ni-ki+1) + math.lgamma(ki+alpha) + math.lgamma(ni-ki+beta) - math.lgamma(ni+alpha+beta) + Const)
-            lbeta.append(math.lgamma(ki+alpha) + math.lgamma(ni-ki+beta) - math.lgamma(ni+alpha+beta) + Const)
-        return np.array(lbeta)
-    else:
-        return math.lgamma(k+alpha) + math.lgamma(n-k+beta) - math.lgamma(n+alpha+beta) + Const
-        # return math.lgamma(n+1)- math.lgamma(k+1) - math.lgamma(n-k+1) + math.lgamma(k+alpha) + math.lgamma(n-k+beta) - math.lgamma(n+alpha+beta) + Const
-
-def getConfusion(Yhat,Y):
-    if len(Yhat)!=len(Y):
-        raise NameError('Yhat has different length')
-    TP = np.dot(np.array(Y),np.array(Yhat))
-    FP = np.sum(Yhat) - TP
-    TN = len(Y) - np.sum(Y)-FP
-    FN = len(Yhat) - np.sum(Yhat) - TN
-    return TP,FP,TN,FN
-
-def predict(rules,df):
-    Z = [[] for rule in rules]
-    dfn = 1-df #df has negative associations
-    dfn.columns = [name.strip() + '_neg' for name in df.columns]
-    df = pd.concat([df,dfn],axis = 1)
-    for i,rule in enumerate(rules):
-        Z[i] = (np.sum(df[list(rule)],axis=1)==len(rule)).astype(int)
-    Yhat = (np.sum(Z,axis=0)>0).astype(int)
-    return Yhat
-
-def extract_rules(tree, feature_names):
-    left      = tree.tree_.children_left
-    right     = tree.tree_.children_right
-    threshold = tree.tree_.threshold
-    features  = [feature_names[i] for i in tree.tree_.feature]
-    # get ids of child nodes
-    idx = np.argwhere(left == -1)[:,0]     
-
-    def recurse(left, right, child, lineage=None):          
-        if lineage is None:
-            lineage = []
-        if child in left:
-            parent = np.where(left == child)[0].item()
-            suffix = '_neg'
-        else:
-            parent = np.where(right == child)[0].item()
-            suffix = ''
-
-        #           lineage.append((parent, split, threshold[parent], features[parent]))
-        lineage.append((features[parent].strip()+suffix))
-
-        if parent == 0:
-            lineage.reverse()
-            return lineage
-        else:
-            return recurse(left, right, parent, lineage)   
-    rules = []
-    for child in idx:
-        rule = []
-        for node in recurse(left, right, child):
-            rule.append(node)
-        rules.append(rule)
-    return rules
