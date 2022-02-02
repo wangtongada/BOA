@@ -114,7 +114,7 @@ class BOA(object):
         self.RMatrix = np.array(Z[:,supp_select[select]])
         print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(self.rules)))
 
-    def set_parameters(self, a1=100,b1=1,a2=1,b2=100,al=None,bl=None):
+    def set_parameters(self, a1=1,b1=1,a2=100,b2=100,al=None,bl=None):
         # input al and bl are lists
         self.alpha_1 = a1
         self.beta_1 = b1
