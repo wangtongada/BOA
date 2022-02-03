@@ -131,7 +131,7 @@ class BOA(object):
             self.alpha_l=[1] + list(al)
             self.beta_l = [1] + list(bl)
 
-    def fit(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], print_message=True):
+    def fit(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], keep_most_accurate_model = True,print_message=True):
         # print('Searching for an optimal solution...')
         start_time = time.time()
         nRules = len(self.rules)
@@ -139,6 +139,8 @@ class BOA(object):
         maps = defaultdict(list)
         T0 = 1000
         split = 0.7*Niteration
+        acc = {}
+        most_accurate_model = defaultdict(list)
         for chain in range(Nchain):
             # initialize with a random pattern set
             if init !=[]:
@@ -149,7 +151,7 @@ class BOA(object):
             rules_curr_norm = self.normalize(rules_curr)
             pt_curr = -100000000000
             maps[chain].append([-1,[pt_curr/3,pt_curr/3,pt_curr/3],rules_curr,[self.rules[i] for i in rules_curr]])
-
+            acc[chain] = 0
             for iter in range(Niteration):
                 if iter>=split:
                     p = np.array(range(1+len(maps[chain])))
@@ -164,6 +166,12 @@ class BOA(object):
                 pt_new = sum(prob)
                 alpha = np.exp(float(pt_new -pt_curr)/T)
                 
+                if (cfmatrix[0] + cfmatrix[2])/sum(cfmatrix)> acc[chain]:
+                    most_accurate_model[chain] = rules_new[:]
+                    acc[chain] = (cfmatrix[0] + cfmatrix[2])/sum(cfmatrix)
+                    if print_message:
+                        print('found a more accurate model: accuracy = {}'.format(acc[chain]))
+                        
                 if pt_new > sum(maps[chain][-1][1]):
                     maps[chain].append([iter,prob,rules_new,[self.rules[i] for i in rules_new]])
                     if print_message:
@@ -173,10 +181,15 @@ class BOA(object):
                         print(rules_new)
                 if random() <= alpha:
                     rules_curr_norm,rules_curr,pt_curr = rules_norm.copy(),rules_new.copy(),pt_new
-        pt_max = [sum(maps[chain][-1][1]) for chain in range(Nchain)]
-        index = pt_max.index(max(pt_max))
         # print('\tTook %0.3fs to generate an optimal rule set' % (time.time() - start_time))
-        return maps[index][-1][3]
+        if keep_most_accurate_model:
+            acc_list = [acc[chain] for chain in range(Nchain)]
+            index = acc_list.index(max(acc_list))
+            return [self.rules[i] for i in most_accurate_model[index]] 
+        else:
+            pt_max = [sum(maps[chain][-1][1]) for chain in range(Nchain)]
+            index = pt_max.index(max(pt_max))
+            return maps[index][-1][3]
 
     def propose(self, rules_curr,rules_norm,q):
         nRules = len(self.rules)
