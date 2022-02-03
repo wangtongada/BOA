@@ -114,8 +114,9 @@ class BOA(object):
         self.RMatrix = np.array(Z[:,supp_select[select]])
         print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(self.rules)))
 
-    def set_parameters(self, a1=1,b1=100,a2=1,b2=100,al=None,bl=None):
+    def set_parameters(self, a1=100,b1=10,a2=100,b2=10,al=None,bl=None):
         # input al and bl are lists
+        # a1/(a1 + b1) and a2/(a2 + b2) should be a  bigger than 0.5. They correspond to alpha_+, beta_+ and alpha_- and beta_- from the paper. In fact, these four values play an important role and it needs to be tuned while following the a1/(a1 + b1) >0.5 and a2/(a2 + b2) >0.5 principle
         self.alpha_1 = a1
         self.beta_1 = b1
         self.alpha_2 = a2
