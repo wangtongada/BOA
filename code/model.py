@@ -131,7 +131,7 @@ class BOA(object):
             self.alpha_l=[1] + list(al)
             self.beta_l = [1] + list(bl)
 
-    def fit(self, Niteration = 5000, Nchain = 3, q = 0.1, init = [], keep_most_accurate_model = True,print_message=True):
+    def fit(self, Niteration = 300, Nchain = 1, q = 0.1, init = [], keep_most_accurate_model = True,print_message=True):
         # print('Searching for an optimal solution...')
         start_time = time.time()
         nRules = len(self.rules)
