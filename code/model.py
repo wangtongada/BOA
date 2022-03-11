@@ -1,5 +1,5 @@
 import pandas as pd 
-from fim import fpgrowth,fim
+# from fim import fpgrowth,fim --> this package is difficult to install. So the rule miner can be replaced by a random forest
 import numpy as np
 import math
 from itertools import chain, combinations
@@ -53,28 +53,28 @@ class BOA(object):
         df = 1-self.df #df has negative associations
         df.columns = [name.strip() + '_neg' for name in self.df.columns]
         df = pd.concat([self.df,df],axis = 1)
-        if method =='fpgrowth' and maxlen<=3:
-            itemMatrix = [[item for item in df.columns if row[item] ==1] for i,row in df.iterrows() ]  
-            pindex = np.where(self.Y==1)[0]
-            nindex = np.where(self.Y!=1)[0]
-            print('Generating rules using fpgrowth')
-            start_time = time.time()
-            rules= fpgrowth([itemMatrix[i] for i in pindex],supp = supp,zmin = 1,zmax = maxlen)
-            rules = [tuple(np.sort(rule[0])) for rule in rules]
-            rules = list(set(rules))
-            start_time = time.time()
-            print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules)))
-        else:
-            rules = []
-            start_time = time.time()
-            for length in range(1,maxlen+1,1):
-                n_estimators = min(pow(df.shape[1],length),4000)
-                clf = RandomForestClassifier(n_estimators = n_estimators,max_depth = length)
-                clf.fit(self.df,self.Y)
-                for n in range(n_estimators):
-                    rules.extend(extract_rules(clf.estimators_[n],df.columns))
-            rules = [list(x) for x in set(tuple(x) for x in rules)]
-            print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules)))
+#         if method =='fpgrowth' and maxlen<=3:
+#             itemMatrix = [[item for item in df.columns if row[item] ==1] for i,row in df.iterrows() ]  
+#             pindex = np.where(self.Y==1)[0]
+#             nindex = np.where(self.Y!=1)[0]
+#             print('Generating rules using fpgrowth')
+#             start_time = time.time()
+#             rules= fpgrowth([itemMatrix[i] for i in pindex],supp = supp,zmin = 1,zmax = maxlen)
+#             rules = [tuple(np.sort(rule[0])) for rule in rules]
+#             rules = list(set(rules))
+#             start_time = time.time()
+#             print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules)))
+#         else:
+        rules = []
+        start_time = time.time()
+        for length in range(1,maxlen+1,1):
+            n_estimators = min(pow(df.shape[1],length),4000)
+            clf = RandomForestClassifier(n_estimators = n_estimators,max_depth = length)
+            clf.fit(self.df,self.Y)
+            for n in range(n_estimators):
+                rules.extend(extract_rules(clf.estimators_[n],df.columns))
+        rules = [list(x) for x in set(tuple(x) for x in rules)]
+        print('\tTook %0.3fs to generate %d rules' % (time.time() - start_time, len(rules)))
         self.screen_rules(rules,df,N) # select the top N rules using secondary criteria, information gain
         self.getPatternSpace()
 
